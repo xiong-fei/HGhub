@@ -55,8 +55,10 @@ export type PlayInfo = {
   ep_num: number;
   duration: number;
   title: string;
-  video_url: string;
+  video_url?: string;
   video_url_hevc?: string;
+  /** 上游新播放接口返回的取流地址；优先取 main。 */
+  streams?: { main?: string; hevc?: string; preview?: string };
 };
 
 export type RankItem = {
