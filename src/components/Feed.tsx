@@ -96,7 +96,6 @@ export default function Feed({ videoIds, startIndex = 0, title = "", mode, kind 
   const [scrub, setScrub] = useState<{ pct: number; target: number } | null>(null);
   const scrubTarget = useRef<number | null>(null);
   /* 进度条拖动 */
-  const barRef = useRef<HTMLDivElement>(null);
   const barScrub = useRef(false);
   const [barPct, setBarPct] = useState<number | null>(null);
   const gesture = useRef<{
@@ -116,7 +115,9 @@ export default function Feed({ videoIds, startIndex = 0, title = "", mode, kind 
   /* 观看进度：onTime 里每 5 秒落一次；退出播放页时再用 liveRef 兜一次 */
   const onTimeTick = (t: number) => {
     liveRef.current = { id: curId, ep: curEp, dur: duration, t };
-    setTime(t);
+    if (!barScrub.current && gesture.current?.mode !== "scrub") {
+      setTime(t);
+    }
     const now = Date.now();
     if (duration > 0 && now - lastSaveRef.current > 5000) {
       lastSaveRef.current = now;
@@ -432,46 +433,55 @@ export default function Feed({ videoIds, startIndex = 0, title = "", mode, kind 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDesktop, videoIds.length]);
 
-  /* —— 进度条拖动（旋转舞台下按 Y 轴换算） —— */
-  const barPctAt = (clientX: number, clientY: number) => {
-    const r = barRef.current?.getBoundingClientRect();
+  /* —— 进度条拖动（直接用当前触发元素的 BoundingRect，旋转舞台下按 Y 轴换算） —— */
+  const barPctAt = (barEl: HTMLElement | null, clientX: number, clientY: number) => {
+    const r = barEl?.getBoundingClientRect();
     if (!r) return null;
     const span = rotated ? r.height : r.width;
     if (!span) return null;
     const raw = rotated ? (clientY - r.top) / span : (clientX - r.left) / span;
     return Math.max(0, Math.min(1, raw));
   };
-  const barSeekTo = (clientX: number, clientY: number) => {
-    const pct = barPctAt(clientX, clientY);
+  const barSeekTo = (barEl: HTMLElement | null, clientX: number, clientY: number) => {
+    const pct = barPctAt(barEl, clientX, clientY);
     if (pct == null) return null;
     setBarPct(pct);
     return pct;
   };
   const onBarDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!active || controlsLocked || !duration) return;
     e.stopPropagation();
+    e.preventDefault();
     videoRef.current?.trace("seek.input.down", { input: "mobile_bar" });
     barScrub.current = true;
-    try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* ignore */ }
-    barSeekTo(e.clientX, e.clientY);
+    const el = e.currentTarget as HTMLElement;
+    try { el.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+    barSeekTo(el, e.clientX, e.clientY);
   };
   const onBarMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!barScrub.current) return;
     e.stopPropagation();
     videoRef.current?.trace("seek.input.move", { input: "mobile_bar" });
-    barSeekTo(e.clientX, e.clientY);
+    barSeekTo(e.currentTarget as HTMLElement, e.clientX, e.clientY);
+  };
+  const cancelBar = () => {
+    if (!barScrub.current) return;
+    barScrub.current = false;
+    setBarPct(null);
   };
   const onBarUp = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!barScrub.current) return;
     barScrub.current = false;
     e.stopPropagation();
-    const pct = barPctAt(e.clientX, e.clientY);
-    if (pct != null && duration) {
-      const target = pct * duration;
+    const pct = barPctAt(e.currentTarget as HTMLElement, e.clientX, e.clientY) ?? barPct;
+    setBarPct(null);
+    if (pct != null && duration > 0) {
+      const target = Math.max(0, Math.min(duration - 0.15, pct * duration));
+      setErr("");
+      setTime(target);
       videoRef.current?.trace("seek.input.up", { input: "mobile_bar", target });
       videoRef.current?.seek(target, "mobile_bar");
-      setTime(target);
     }
-    setBarPct(null);
   };
 
   const togglePip = async () => {
@@ -704,8 +714,9 @@ export default function Feed({ videoIds, startIndex = 0, title = "", mode, kind 
                       className="px-4 flex items-center gap-0.5 text-[10.5px] font-medium hg-ink hg-ov-shadow pressable">
                       详情 · 第 {curEp} 集<IChevR size={11} />
                     </button>
-                    <div ref={barRef} className="mx-4 mt-2 relative" style={{ height: 14, touchAction: "none" }}
-                      onPointerDown={onBarDown} onPointerMove={onBarMove} onPointerUp={onBarUp} onPointerCancel={onBarUp}>
+                    <div className="mx-4 mt-1.5 relative" style={{ height: 22, touchAction: "none" }}
+                      onPointerDown={onBarDown} onPointerMove={onBarMove} onPointerUp={onBarUp}
+                      onPointerCancel={cancelBar} onLostPointerCapture={cancelBar}>
                       <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[2.5px] rounded-full" style={{ background: "rgba(255,255,255,.3)" }}>
                         <div className="h-full rounded-full bg-white"
                           style={{ width: `${barProgress * 100}%`, transition: barPct !== null ? "none" : "width .25s linear" }} />
@@ -810,9 +821,10 @@ export default function Feed({ videoIds, startIndex = 0, title = "", mode, kind 
 
       {/* 移动端全屏模式下的进度条（普通模式的进度条在底部灰块里） */}
       {!isDesktop && fs && (
-        <div className="absolute inset-x-0 z-30 px-4" style={{ bottom: "calc(var(--sab, 0px) + 52px)", height: 22 }}>
-          <div ref={barRef} className="relative h-full" style={{ touchAction: "none" }}
-            onPointerDown={onBarDown} onPointerMove={onBarMove} onPointerUp={onBarUp} onPointerCancel={onBarUp}>
+        <div className="absolute inset-x-0 z-30 px-4" style={{ bottom: "calc(var(--sab, 0px) + 52px)", height: 26 }}>
+          <div className="relative h-full" style={{ touchAction: "none" }}
+            onPointerDown={onBarDown} onPointerMove={onBarMove} onPointerUp={onBarUp}
+            onPointerCancel={cancelBar} onLostPointerCapture={cancelBar}>
             <div className="absolute inset-x-0 bottom-[8px] h-[2.5px] rounded-full" style={{ background: "rgba(255,255,255,.3)" }}>
               <div className="h-full rounded-full bg-white" style={{ width: `${barProgress * 100}%` }} />
             </div>
