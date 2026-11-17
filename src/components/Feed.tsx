@@ -108,6 +108,12 @@ export default function Feed({ videoIds, startIndex = 0, title = "", mode, kind 
   const curEp = epMap[curId] || 1;
   const playKey = `${curId}:${curEp}`;
   const playUrl = playUrls[playKey] || "";
+  /* 给独立迷你窗同步当前剧集，切集时迷你窗会重新取流 */
+  useEffect(() => {
+    if (active && curId) {
+      localStorage.setItem("hghub_moyu_current", JSON.stringify({ id: curId, ep: curEp }));
+    }
+  }, [active, curId, curEp]);
   useEffect(() => { videoRef.current?.trace("page.active", { active, view: mode, video_id: curId, episode: curEp }); }, [active, mode, curId, curEp]);
   const episodes = detail?.episodes || [];
   const post = posts[curId];

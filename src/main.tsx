@@ -1,7 +1,9 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
+import MoyuMini from "./components/MoyuMini";
 import { AppProvider } from "./store";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import "./index.css";
 import { initPlaybackLog, installPlaybackPageEvents } from "./playbackDiagnostics";
@@ -20,10 +22,16 @@ window.addEventListener("unhandledrejection", (e) => {
   report("reject", String((e.reason && (e.reason.stack || e.reason.message)) || e.reason));
 });
 
+const isMoyu = getCurrentWindow().label === "moyu" || new URLSearchParams(window.location.search).has("moyu");
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <AppProvider>
-      <App />
-    </AppProvider>
-  </React.StrictMode>,
+  isMoyu ? (
+    <MoyuMini />
+  ) : (
+    <React.StrictMode>
+      <AppProvider>
+        <App />
+      </AppProvider>
+    </React.StrictMode>
+  ),
 );

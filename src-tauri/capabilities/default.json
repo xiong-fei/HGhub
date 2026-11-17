@@ -2,7 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "HGhub 默认能力",
-  "windows": ["main"],
+  "windows": ["main", "moyu"],
   "permissions": [
     "core:default",
     "core:app:allow-exit",
@@ -13,6 +13,14 @@
     "core:window:allow-close",
     "core:window:allow-is-maximized",
     "core:window:allow-is-fullscreen",
-    "core:window:allow-set-fullscreen"
+    "core:window:allow-set-fullscreen",
+    "core:window:allow-set-position",
+    "core:window:allow-set-size",
+    "core:window:allow-current-monitor",
+    "core:window:allow-set-always-on-top",
+    "core:window:allow-set-focus",
+    "core:window:allow-show",
+    "core:window:allow-hide",
+    "core:event:default"
   ]
 }

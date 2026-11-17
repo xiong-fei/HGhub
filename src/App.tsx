@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useStore, type Page, type Tab } from "./store";
 import { isMobile, selfTest } from "./api";
 import { addPluginListener, invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { runBack } from "./back";
 import Home from "./pages/Home";
 import Search, { RankPage } from "./pages/Search";
@@ -231,6 +232,12 @@ export default function App() {
   useEffect(() => {
     tracePlayback("navigation.change", { tab, stack: stack.map(p => ({ page: p.kind, key: p.key })), login_open: loginOpen });
   }, [tab, stack, loginOpen]);
+
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    void listen("moyu-open-search", () => setTab("search")).then((fn) => { unlisten = fn; });
+    return () => unlisten?.();
+  }, [setTab]);
 
   /* —— 安卓硬件返回键 ——
      层级：全屏 → 面板/弹层 → 登录框 → 页面栈 → 回首页 → 退出应用。

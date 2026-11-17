@@ -301,9 +301,15 @@ pub async fn api_me(state: State<'_, Api>) -> Result<Value, String> {
 /* ───────────────────────── 列表 ───────────────────────── */
 
 #[tauri::command]
-pub async fn api_feed(state: State<'_, Api>, page: u32, size: u32) -> Result<Value, String> {
+pub async fn api_feed(
+    state: State<'_, Api>,
+    page: u32,
+    size: u32,
+    sort: Option<String>,
+) -> Result<Value, String> {
+    let sort = sort.unwrap_or_else(|| "new".to_string());
     state
-        .get(&format!("/api/videos?page={page}&size={size}"))
+        .get(&format!("/api/videos?page={page}&size={size}&sort={sort}"))
         .await
 }
 

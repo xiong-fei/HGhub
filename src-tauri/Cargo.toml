@@ -1,6 +1,6 @@
 [package]
 name = "huangguo-client"
-version = "1.2.2"
+version = "1.2.3"
 description = "HGhub · 黄果短剧客户端"
 authors = ["HGhub"]
 license = "PolyForm-Noncommercial-1.0.0"
@@ -40,6 +40,14 @@ url = "2"
 
 # macOS 红绿灯垂直居中需要读取 AppKit 按钮尺寸（见 src/macos_titlebar.rs）。
 # 三者均已是 tao/wry 的间接依赖，版本与 Cargo.lock 一致；只开启用到的 feature。
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-sys = { version = "0.61", features = [
+  "Win32_Foundation",
+  "Win32_System_LibraryLoader",
+  "Win32_UI_WindowsAndMessaging",
+  "Win32_UI_Input_KeyboardAndMouse",
+] }
+
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"
 objc2-app-kit = { version = "0.3", default-features = false, features = [
