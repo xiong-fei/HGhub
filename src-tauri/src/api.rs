@@ -307,7 +307,39 @@ pub async fn api_feed(
     size: u32,
     sort: Option<String>,
 ) -> Result<Value, String> {
-    let sort = sort.unwrap_or_else(|| "new".to_string());
+    let sort = sort.unwrap_or_else(|| "recent".to_string());
+    if sort.eq_ignore_ascii_case("recent") {
+        // 近期热门：取最新 100 部，再按热度排序，避免“历史热剧”长期霸榜。
+        let mut value = state.get("/api/videos?page=1&size=100&sort=new").await?;
+        let mut items = value
+            .get("data")
+            .and_then(|data| data.get("items"))
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        items.sort_by(|a, b| {
+            b.get("hot")
+                .and_then(Value::as_i64)
+                .unwrap_or(0)
+                .cmp(&a.get("hot").and_then(Value::as_i64).unwrap_or(0))
+        });
+        let total = items.len();
+        let page_size = size.max(1) as usize;
+        let start = ((page.saturating_sub(1) as usize) * page_size).min(total);
+        let end = (start + page_size).min(total);
+        let page_items = items[start..end].to_vec();
+        let pages = ((total + page_size - 1) / page_size) as u32;
+        if let Some(data) = value.get_mut("data") {
+            data["items"] = Value::Array(page_items);
+            data["pagination"] = json!({
+                "page": page,
+                "pages": pages.max(1),
+                "size": size,
+                "total": total,
+            });
+        }
+        return Ok(value);
+    }
     state
         .get(&format!("/api/videos?page={page}&size={size}&sort={sort}"))
         .await
