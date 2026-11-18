@@ -54,6 +54,15 @@ pub fn run() {
                 .build(),
         )
         .manage(Api::new())
+        .on_window_event(|window, event| {
+            // 关闭主窗口时只隐藏，保留右下角摸鱼小条；真正退出走小条的 ✕ / 右键+0。
+            if window.label() == "main" {
+                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
+            }
+        })
         .setup(|app| {
             if let Ok(dir) = app.path().app_data_dir() {
                 let _ = std::fs::create_dir_all(&dir);
