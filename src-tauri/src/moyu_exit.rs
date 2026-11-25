@@ -8,7 +8,7 @@ use std::sync::{
 };
 
 #[cfg(target_os = "windows")]
-use tauri::AppHandle;
+use tauri::{AppHandle, Emitter};
 
 #[cfg(target_os = "windows")]
 static APP: OnceLock<AppHandle> = OnceLock::new();
@@ -47,6 +47,12 @@ unsafe extern "system" fn mouse_proc(code: i32, wparam: usize, lparam: isize) ->
 
     if code >= 0 {
         match wparam as u32 {
+            WM_LBUTTONUP => {
+                // 原生窗口拖动/缩放会接管浏览器的 pointerup，用全局事件通知前端收尾。
+                if let Some(app) = APP.get() {
+                    let _ = app.emit("moyu-primary-up", ());
+                }
+            }
             WM_RBUTTONDOWN => RIGHT_DOWN.store(true, Ordering::SeqCst),
             WM_RBUTTONUP => RIGHT_DOWN.store(false, Ordering::SeqCst),
             _ => {}

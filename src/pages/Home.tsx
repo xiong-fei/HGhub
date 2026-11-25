@@ -41,6 +41,11 @@ export default function Home({ active, bottomInset }: { active: boolean; bottomI
 
   useEffect(() => { if (!items.length) load(1); /* eslint-disable-next-line */ }, []);
 
+  // 独立小窗沿用首页已经加载的片单顺序；末尾之后由小窗继续分页加载。
+  useEffect(() => {
+    if (items.length) localStorage.setItem("hghub_moyu_feed_ids", JSON.stringify(items.map((v) => v.id)));
+  }, [items]);
+
   const ids = items.map((v) => v.id);
 
   return (

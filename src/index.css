@@ -153,6 +153,54 @@ html.moyu-root body { color: #fff; }
 .moyu-result-title { font-size: 11px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .moyu-result-meta { margin-top: 2px; font-size: 9px; color: rgba(255,255,255,.55); }
 .moyu-search-empty { padding: 18px 6px; font-size: 11px; color: rgba(255,255,255,.55); text-align: center; }
+.moyu-recommend {
+  position: absolute; inset: 0 0 30px; z-index: 10;
+  display: flex; flex-direction: column; min-height: 0;
+  background: rgba(8,10,14,.96); backdrop-filter: blur(10px); color: #fff;
+}
+.moyu-rec-head { display: flex; align-items: center; justify-content: space-between; height: 32px; padding: 0 9px; flex: 0 0 auto; }
+.moyu-rec-head strong { font-size: 12px; }
+.moyu-rec-head button { width: 24px; height: 24px; border: 0; border-radius: 6px; background: transparent; color: #fff; }
+.moyu-rec-tabs { display: flex; gap: 4px; padding: 0 8px 6px; flex: 0 0 auto; }
+.moyu-rec-tabs button {
+  flex: 1; height: 25px; border: 0; border-radius: 7px;
+  background: rgba(255,255,255,.07); color: rgba(255,255,255,.58); font-size: 10px;
+}
+.moyu-rec-tabs button.is-active { background: rgba(96,205,255,.24); color: #9cddff; }
+.moyu-rec-hint {
+  padding: 0 9px 6px; font-size: 9px; color: rgba(255,255,255,.48);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 0 auto;
+}
+.moyu-rec-list { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.moyu-rec-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 0 8px 8px; }
+.moyu-rec-card { min-width: 0; padding: 0; border: 0; background: transparent; color: #fff; text-align: left; overflow: hidden; }
+.moyu-rec-cover { position: relative; display: block; width: 100%; aspect-ratio: 1; overflow: hidden; border-radius: 8px; background: #20242b; }
+.moyu-rec-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.moyu-rec-cover i {
+  position: absolute; left: 4px; bottom: 4px; padding: 2px 4px; border-radius: 4px;
+  background: rgba(0,0,0,.68); color: rgba(255,255,255,.9); font-size: 8px; font-style: normal;
+}
+.moyu-rec-card strong, .moyu-rec-card small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.moyu-rec-card strong { margin-top: 4px; font-size: 10px; line-height: 1.4; }
+.moyu-rec-card small { margin-top: 1px; color: rgba(255,255,255,.48); font-size: 8px; line-height: 1.4; }
+.moyu-rec-empty { padding: 28px 10px; text-align: center; color: rgba(255,255,255,.52); font-size: 10px; }
+.moyu-rec-footer { display: flex; gap: 6px; padding: 5px 8px 7px; flex: 0 0 auto; }
+.moyu-rec-footer button, .moyu-lucky-actions button {
+  flex: 1; height: 27px; border: 1px solid rgba(255,255,255,.1); border-radius: 7px;
+  background: rgba(255,255,255,.08); color: #fff; font-size: 10px;
+}
+.moyu-rec-footer button:disabled { opacity: .35; cursor: default; }
+.moyu-lucky { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 12px 10px; text-align: center; }
+.moyu-lucky-cover { width: min(128px, 48%); aspect-ratio: 3 / 4; margin: 0 auto 8px; border-radius: 10px; overflow: hidden; background: #20242b; }
+.moyu-lucky-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.moyu-lucky-title { display: block; font-size: 13px; line-height: 1.4; }
+.moyu-lucky-meta { margin-top: 3px; color: #9cddff; font-size: 9px; }
+.moyu-lucky-desc {
+  margin: 7px 0; color: rgba(255,255,255,.58); font-size: 10px; line-height: 1.5;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.moyu-lucky-actions { display: flex; gap: 5px; }
+.moyu-lucky-actions button.is-primary { border-color: transparent; background: #60cdff; color: #06202c; font-weight: 600; }
 .moyu-resize {
   position: absolute; right: 6px; bottom: 38px; width: 32px; height: 32px; z-index: 8;
   cursor: nwse-resize;
@@ -180,9 +228,9 @@ html.moyu-root body { color: #fff; }
   background: repeating-linear-gradient(90deg, rgba(255,255,255,.35) 0 1px, transparent 1px 5px);
   border-radius: 10px 0 0 10px;
 }
-.moyu-stage { position: absolute; inset: 0 0 30px 0; overflow: hidden; }
+.moyu-stage { position: absolute; inset: 0 0 30px 0; overflow: hidden; background: #000; }
 .moyu-stage.is-collapsed { opacity: 0; pointer-events: none; }
-.moyu-video, .moyu-video video { width: 100%; height: 100%; display: block; }
+.moyu-video, .moyu-video video { width: 100%; height: 100%; display: block; background: #000; object-fit: contain; }
 .moyu-controls {
   position: absolute; left: 0; right: 0; bottom: 0; height: 30px; z-index: 7;
   display: flex; align-items: center; gap: 3px; padding: 0 5px;
@@ -200,6 +248,12 @@ html.moyu-root body { color: #fff; }
   flex: 1; min-width: 30px; height: 13px; margin: 0; accent-color: #60cdff;
 }
 .moyu-time { white-space: nowrap; color: rgba(255,255,255,.8); font-variant-numeric: tabular-nums; }
+.moyu-notice {
+  position: absolute; left: 50%; bottom: 36px; z-index: 9; transform: translateX(-50%);
+  max-width: calc(100% - 20px); padding: 5px 9px; border-radius: 6px;
+  background: rgba(20,22,28,.9); color: rgba(255,255,255,.88); font-size: 11px;
+  white-space: nowrap; pointer-events: none;
+}
 .moyu-volume-pop {
   position: absolute; right: 6px; bottom: 34px; z-index: 8;
   display: flex; align-items: center; gap: 4px; width: 130px; height: 28px;
