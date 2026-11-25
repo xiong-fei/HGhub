@@ -9,8 +9,8 @@ use std::time::{Duration, Instant};
 
 /// 固定线路：写死在客户端里，不依赖任何外部页面。
 pub const FIXED: [(&str, &str); 2] = [
-    ("固定线路 1", "https://huangguoai.com"),
-    ("固定线路 2", "https://huangguoai.ai"),
+    ("固定线路 1", "https://thu.aqkmowihz.cc"),
+    ("固定线路 2", "https://pku.aqkmowihz.cc"),
 ];
 
 const PUBLISH_PAGE: &str = "https://huangguoai.pages.dev/";

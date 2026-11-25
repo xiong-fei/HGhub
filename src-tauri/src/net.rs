@@ -20,8 +20,6 @@
 //! `net_diag` 命令会输出 DNS/HTTP/环境变量快照。
 
 use crate::network_policy;
-use base64::engine::general_purpose::STANDARD as B64;
-use base64::Engine;
 use once_cell::sync::Lazy;
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -31,7 +29,7 @@ use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Duration, Instant};
 
 /// 默认上游（固定线路 1）。
-pub const DEFAULT_BASE: &str = "https://huangguoai.com";
+pub const DEFAULT_BASE: &str = "https://thu.aqkmowihz.cc";
 
 /// 当前上游基址（不带结尾斜杠）。可在设置里切到固定线路 2 或镜像线路，运行时立即生效。
 static BASE: Lazy<RwLock<String>> = Lazy::new(|| RwLock::new(DEFAULT_BASE.to_string()));
@@ -60,7 +58,26 @@ pub fn normalize_base(raw: &str) -> Option<String> {
 
 /// 远端发布页只提供游客镜像，不能扩展账号密码的信任范围。
 pub fn trusted_auth_origin(origin: &str) -> bool {
-    matches!(origin, "https://huangguoai.com" | "https://huangguoai.ai")
+    if matches!(origin, "https://huangguoai.com" | "https://huangguoai.ai") {
+        return true;
+    }
+    url::Url::parse(origin)
+        .ok()
+        .and_then(|u| u.host_str().map(str::to_owned))
+        .is_some_and(|host| {
+            host.ends_with(".aqkmowihz.cc") || host.ends_with(".xxslfswu.cc")
+        })
+}
+
+fn retired_base(origin: &str) -> bool {
+    url::Url::parse(origin)
+        .ok()
+        .and_then(|u| u.host_str().map(|h| h.to_ascii_lowercase()))
+        .is_some_and(|host| {
+            host == "huangguoai.com"
+                || host == "huangguoai.ai"
+                || host.ends_with(".ixgukkejj.cc")
+        })
 }
 
 /// 启动时读回上次选择的线路（文件不存在 / 内容坏了就保持默认）。
@@ -74,6 +91,11 @@ pub fn bind_base(dir: &std::path::Path) {
                 .and_then(|x| x.as_str())
                 .and_then(normalize_base)
             {
+                let next = if retired_base(&next) {
+                    DEFAULT_BASE.to_string()
+                } else {
+                    next
+                };
                 if let Ok(mut cur) = BASE.write() {
                     *cur = next;
                 }
@@ -483,21 +505,7 @@ pub async fn edge(
     {
         return Err("镜像线路仅供游客浏览；登录/注册请切换到固定线路".into());
     }
-    let (encoded, ctype) = match &body {
-        Some(v) => (
-            B64.encode(serde_json::to_vec(v).map_err(|e| e.to_string())?),
-            "application/json",
-        ),
-        None => (String::new(), ""),
-    };
-    let envelope = json!({
-        "method": method,
-        "path": path,
-        "body": encoded,
-        "content_type": ctype,
-    });
-
-    let url = format!("{cur}/api/edge/request");
+    let url = format!("{cur}{path}");
     let referer = format!("{cur}/");
     let token = token.map(|s| s.to_string());
 
@@ -515,7 +523,7 @@ pub async fn edge(
     let value = with_retry(can_retry, || {
         attempt += 1;
         let attempt = attempt;
-        let envelope = envelope.clone();
+        let body = body.clone();
         let token = token.clone();
         let url = url.clone();
         let referer = referer.clone();
@@ -533,11 +541,14 @@ pub async fn edge(
                 for hop in 0..=5 {
                     let (target, client) = client_for(next.as_str()).await?;
                     target_host = target.host_str().unwrap_or("").to_string();
-                    let mut req = client
-                        .post(target.clone())
+                    let mut req = if method.eq_ignore_ascii_case("GET") {
+                        client.get(target.clone())
+                    } else {
+                        client.post(target.clone()).json(&body.clone().unwrap_or_else(|| json!({})))
+                    };
+                    req = req
                         .header("Accept", "application/json")
-                        .header("Referer", &referer)
-                        .json(&envelope);
+                        .header("Referer", &referer);
                     if let Some(t) = token.as_deref() {
                         if !t.is_empty() {
                             req = req.header("Authorization", format!("Bearer {t}"));
@@ -550,7 +561,7 @@ pub async fn edge(
                     let ctype = resp.headers().get(reqwest::header::CONTENT_TYPE).and_then(|v| v.to_str().ok()).unwrap_or("");
                     response_kind = if ctype.contains("json") { "json" } else if ctype.contains("html") { "html" } else { "other" };
                     gateway = if resp.headers().contains_key("x-amz-cf-id") { "cloudfront" } else if resp.headers().contains_key("cf-ray") { "cloudflare" } else { "other" };
-                    // 逐跳重建并检查客户端；不自动把信封 POST 改成无信封 GET。
+                    // 逐跳重建并检查客户端；GET 重定向按原方法继续。
                     if status.is_redirection() {
                         if hop == 5 {
                             return Err("重定向次数超过限制".into());

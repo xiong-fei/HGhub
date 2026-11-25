@@ -85,7 +85,7 @@ export default function MoyuMini() {
   const [expandedSize, setExpandedSize] = useState<Size>(readExpandedSize);
   const expandedSizeRef = useRef(expandedSize);
   const expandedRef = useRef(false);
-  const [current, setCurrent] = useState<Current | null>(readCurrent);
+  const [current, setCurrent] = useState<Current | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [src, setSrc] = useState("");
   const [time, setTime] = useState(0);
@@ -120,7 +120,7 @@ export default function MoyuMini() {
     const syncCurrent = () => {
       const next = readCurrent();
       setCurrent((prev) =>
-        prev && next && prev.id === next.id && prev.ep === next.ep ? prev : next,
+        !prev || !next || (prev.id === next.id && prev.ep === next.ep) ? prev : next,
       );
     };
     const syncTimer = window.setInterval(syncCurrent, 1000);
@@ -203,6 +203,7 @@ export default function MoyuMini() {
           const first = feed?.items?.[0];
           if (first) {
             target = { id: first.id, ep: 1 };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(target));
             if (alive) setCurrent(target);
           }
         } catch {
