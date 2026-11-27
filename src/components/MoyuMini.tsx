@@ -184,11 +184,15 @@ export default function MoyuMini() {
       try {
         const monitor = await currentMonitor();
         if (!monitor) return;
-        const pos = await win.outerPosition();
-        const size = await win.outerSize();
+        const [pos, outerSize, innerSize] = await Promise.all([
+          win.outerPosition(),
+          win.outerSize(),
+          win.innerSize(),
+        ]);
         const scale = monitor.scaleFactor;
-        if (expandedRef.current && size.height > 80) {
-          const next = { w: Math.round(size.width / scale), h: Math.round(size.height / scale) };
+        // setSize 使用内框尺寸；记忆展开尺寸时也必须读 innerSize，避免每轮叠加隐形边框。
+        if (expandedRef.current && innerSize.height > 80) {
+          const next = { w: Math.round(innerSize.width / scale), h: Math.round(innerSize.height / scale) };
           const prev = expandedSizeRef.current;
           if (next.w > 120 && next.h > 80 && (next.w !== prev.w || next.h !== prev.h)) {
             expandedSizeRef.current = next;
@@ -199,8 +203,8 @@ export default function MoyuMini() {
         // 原生拖动/缩放和程序展开/收起期间只读状态，禁止反向 setPosition 形成位移反馈。
         if (resizing.current || dragging.current || barDragging.current || collapsing.current) return;
         const area = monitor.workArea;
-        const x = Math.max(area.position.x, Math.min(pos.x, area.position.x + area.size.width - size.width));
-        const y = Math.max(area.position.y, Math.min(pos.y, area.position.y + area.size.height - size.height));
+        const x = Math.max(area.position.x, Math.min(pos.x, area.position.x + area.size.width - outerSize.width));
+        const y = Math.max(area.position.y, Math.min(pos.y, area.position.y + area.size.height - outerSize.height));
         if (x !== pos.x || y !== pos.y) {
           await win.setPosition(new LogicalPosition(x / scale, y / scale));
         }
@@ -400,7 +404,11 @@ export default function MoyuMini() {
     collapsing.current = true;
     const currentIntent = () => intent === sizeIntent.current;
     try {
-      const [pos, size] = await Promise.all([win.outerPosition(), win.outerSize()]);
+      const [pos, size, inner] = await Promise.all([
+        win.outerPosition(),
+        win.outerSize(),
+        win.innerSize(),
+      ]);
       if (!currentIntent()) return;
       let scale = 1;
       try {
@@ -416,8 +424,10 @@ export default function MoyuMini() {
       const target = expandedNext ? expandedSizeRef.current : COLLAPSED;
       const targetW = expandedNext ? Math.max(220, target.w) : COLLAPSED.w;
       const targetH = expandedNext ? Math.max(160, target.h) : COLLAPSED.h;
+      const borderH = size.height / scale - inner.height / scale;
       const targetPos = expandedNext
-        ? { x: anchor.x, y: anchor.y - (targetH - COLLAPSED.h) }
+        // 展开向上补窗口边框高度，保持收起条原底边位置；水平坐标不再变化。
+        ? { x: anchor.x, y: anchor.y - (targetH - COLLAPSED.h) - borderH }
         : anchor;
       await win.setMinSize(new LogicalSize(
         expandedNext ? 220 : COLLAPSED.w,
@@ -429,8 +439,8 @@ export default function MoyuMini() {
       await win.setPosition(new LogicalPosition(targetPos.x, targetPos.y));
       if (!currentIntent()) return;
 
-      // 原生尺寸事件可能晚于 Promise 返回；读取实际尺寸，失败时补一次最终写入。
-      const actual = await win.outerSize();
+      // 原生尺寸事件可能晚于 Promise 返回；读取实际内容尺寸，失败时补一次最终写入。
+      const actual = await win.innerSize();
       if (!currentIntent()) return;
       if (Math.abs(actual.width / scale - targetW) > 2 || Math.abs(actual.height / scale - targetH) > 2) {
         await win.setSize(new LogicalSize(targetW, targetH));
